@@ -66,8 +66,19 @@ export function ShoppingListView() {
     const source = remaining.length > 0 ? remaining : items;
     if (source.length === 0) return;
 
+    const recipes = selected.map((entry) => {
+      const meta =
+        recipesById[entry.id] ??
+        data?.recipes.find((recipe) => recipe.id === entry.id);
+      return {
+        name: meta?.name ?? entry.id,
+        servings: entry.servings,
+      };
+    });
+
     const text = formatListForApple(source, {
       title: `Courses — Bocal (${source.length})`,
+      recipes,
     });
 
     try {

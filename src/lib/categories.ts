@@ -712,14 +712,32 @@ export function groupItemsByAisle(items: ShoppingItem[]): GroupedAisle[] {
   }).filter((group): group is GroupedAisle => group !== null);
 }
 
+export type ExportRecipe = {
+  name: string;
+  servings?: number;
+};
+
 /** Texte prêt à coller dans Notes / Rappels Apple. */
 export function formatListForApple(
   items: ShoppingItem[],
-  options?: { title?: string },
+  options?: { title?: string; recipes?: ExportRecipe[] },
 ): string {
   const title = options?.title ?? "Courses — Bocal";
   const groups = groupItemsByAisle(items);
   const lines: string[] = [title, ""];
+
+  const recipes = options?.recipes?.filter((recipe) => recipe.name.trim()) ?? [];
+  if (recipes.length > 0) {
+    lines.push("🍽 Recettes");
+    for (const recipe of recipes) {
+      const servings =
+        typeof recipe.servings === "number" && recipe.servings > 0
+          ? ` — ${recipe.servings} pers.`
+          : "";
+      lines.push(`• ${recipe.name}${servings}`);
+    }
+    lines.push("");
+  }
 
   for (const group of groups) {
     lines.push(`${group.aisle.emoji} ${group.aisle.label}`);
