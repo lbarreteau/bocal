@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import { SelectionProvider } from "@/components/SelectionProvider";
+import { SiteHeader } from "@/components/SiteHeader";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Bocal — HelloFresh → courses",
+  description:
+    "Choisis des recettes HelloFresh et génère une liste de courses pour Intermarché ou Leclerc.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="fr" data-scroll-behavior="smooth">
+      <body>
+        <SelectionProvider>
+          <SiteHeader />
+          <main className="app-main">{children}</main>
+        </SelectionProvider>
+      </body>
+    </html>
+  );
+}

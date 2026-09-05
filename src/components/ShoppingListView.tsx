@@ -1,0 +1,217 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useSelection } from "./SelectionProvider";
+import { formatAmount } from "@/lib/shopping";
+import { STORES, type StoreId } from "@/lib/stores";
+import type { ShoppingItem } from "@/lib/types";
+
+type ListResponse = {
+  items: ShoppingItem[];
+  recipes: Array<{
+    id: string;
+    name: string;
+    image: string;
+    servings: number;
+    websiteUrl: string;
+  }>;
+  error?: string;
+};
+
+export function ShoppingListView() {
+  const { selected, recipesById, setServings, remove, clear } = useSelection();
+  const [storeId, setStoreId] = useState<StoreId>("intermarche");
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [data, setData] = useState<ListResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const store = useMemo(
+    () => STORES.find((entry) => entry.id === storeId) ?? STORES[0],
+    [storeId],
+  );
+
+  useEffect(() => {
+    if (selected.length === 0) {
+      setData({ items: [], recipes: [] });
+      return;
+    }
+
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/shopping-list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipes: selected }),
+          signal: controller.signal,
+        });
+        const json = (await response.json()) as ListResponse;
+        if (!response.ok) throw new Error(json.error ?? "Liste indisponible");
+        setData(json);
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Erreur réseau");
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [selected]);
+
+  const remaining = (data?.items ?? []).filter((item) => !checked[item.key]);
+
+  function openAllRemaining() {
+    remaining.slice(0, 8).forEach((item, index) => {
+      window.setTimeout(() => {
+        window.open(store.searchUrl(item.name), "_blank", "noopener,noreferrer");
+      }, index * 250);
+    });
+  }
+
+  if (selected.length === 0) {
+    return (
+      <section className="section">
+        <div className="empty-state">
+          <h1>Liste vide</h1>
+          <p>Ajoute d’abord quelques recettes HelloFresh.</p>
+          <Link href="/#recettes" className="btn btn-primary">
+            Parcourir les recettes
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section">
+      <div className="section-header">
+        <p className="eyebrow">Courses</p>
+        <h1>Liste fusionnée</h1>
+        <p className="lede">
+          {selected.length} recette{selected.length > 1 ? "s" : ""} · ouvre chaque
+          produit dans ton magasin.
+        </p>
+      </div>
+
+      <div className="toolbar">
+        <div className="segmented" role="group" aria-label="Magasin">
+          {STORES.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className={storeId === entry.id ? "is-active" : ""}
+              aria-pressed={storeId === entry.id}
+              onClick={() => setStoreId(entry.id)}
+            >
+              {entry.shortName}
+            </button>
+          ))}
+        </div>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={openAllRemaining}
+            disabled={remaining.length === 0}
+          >
+            Ouvrir dans {store.shortName}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={clear}>
+            Tout retirer
+          </button>
+        </div>
+      </div>
+      <p className="meta-line">{store.hint}</p>
+
+      <div className="selected-panel">
+        {selected.map((entry) => {
+          const meta =
+            recipesById[entry.id] ??
+            data?.recipes.find((recipe) => recipe.id === entry.id);
+          return (
+            <div key={entry.id} className="selected-row">
+              <div className="selected-main">
+                {meta?.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={meta.image} alt="" width={48} height={48} />
+                ) : null}
+                <div>
+                  <strong>{meta?.name ?? entry.id}</strong>
+                  <label className="servings-label">
+                    Portions
+                    <select
+                      value={entry.servings}
+                      onChange={(event) =>
+                        setServings(entry.id, Number(event.target.value))
+                      }
+                    >
+                      {[1, 2, 3, 4, 5, 6].map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-compact"
+                onClick={() => remove(entry.id)}
+              >
+                Retirer
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {loading ? <p className="status-text">Préparation de la liste…</p> : null}
+      {error ? (
+        <p className="status-text status-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <ul className="shopping-list">
+        {(data?.items ?? []).map((item) => {
+          const isChecked = Boolean(checked[item.key]);
+          return (
+            <li key={item.key} className={isChecked ? "is-checked" : ""}>
+              <label className="shopping-item">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() =>
+                    setChecked((prev) => ({
+                      ...prev,
+                      [item.key]: !prev[item.key],
+                    }))
+                  }
+                />
+                <span>
+                  <strong>{item.name}</strong>
+                  <em>{formatAmount(item.amount, item.unit)}</em>
+                  <small>{item.recipeNames.join(" · ")}</small>
+                </span>
+              </label>
+              <a
+                className="btn btn-primary btn-compact"
+                href={store.searchUrl(item.name)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {store.shortName}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
