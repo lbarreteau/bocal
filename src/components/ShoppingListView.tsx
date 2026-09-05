@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSelection } from "./SelectionProvider";
+import { formatListForApple, groupItemsByAisle } from "@/lib/categories";
 import { formatAmount } from "@/lib/shopping";
 import { STORES, type StoreId } from "@/lib/stores";
 import type { ShoppingItem } from "@/lib/types";
@@ -26,6 +27,7 @@ export function ShoppingListView() {
   const [data, setData] = useState<ListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   const store = useMemo(
     () => STORES.find((entry) => entry.id === storeId) ?? STORES[0],
@@ -63,7 +65,9 @@ export function ShoppingListView() {
     return () => controller.abort();
   }, [selected]);
 
-  const remaining = (data?.items ?? []).filter((item) => !checked[item.key]);
+  const items = data?.items ?? [];
+  const remaining = items.filter((item) => !checked[item.key]);
+  const grouped = useMemo(() => groupItemsByAisle(items), [items]);
 
   function openAllRemaining() {
     remaining.slice(0, 8).forEach((item, index) => {
@@ -71,6 +75,38 @@ export function ShoppingListView() {
         window.open(store.searchUrl(item.name), "_blank", "noopener,noreferrer");
       }, index * 250);
     });
+  }
+
+  async function exportForApple() {
+    const source = remaining.length > 0 ? remaining : items;
+    if (source.length === 0) return;
+
+    const text = formatListForApple(source, {
+      title: `Courses — Bocal (${source.length})`,
+    });
+
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({
+          title: "Courses — Bocal",
+          text,
+        });
+        setExportStatus("Partagé — choisis Notes ou Rappels");
+      } else {
+        await navigator.clipboard.writeText(text);
+        setExportStatus("Liste copiée — colle-la dans Notes ou Rappels");
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setExportStatus("Liste copiée — colle-la dans Notes ou Rappels");
+      } catch {
+        setExportStatus("Impossible d’exporter automatiquement");
+      }
+    }
+
+    window.setTimeout(() => setExportStatus(null), 4000);
   }
 
   if (selected.length === 0) {
@@ -93,8 +129,8 @@ export function ShoppingListView() {
         <p className="eyebrow">Courses</p>
         <h1>Liste fusionnée</h1>
         <p className="lede">
-          {selected.length} recette{selected.length > 1 ? "s" : ""} · ouvre chaque
-          produit dans ton magasin.
+          {selected.length} recette{selected.length > 1 ? "s" : ""} · triée par
+          rayon, prête pour Notes ou Rappels.
         </p>
       </div>
 
@@ -121,12 +157,25 @@ export function ShoppingListView() {
           >
             Ouvrir dans {store.shortName}
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => void exportForApple()}
+            disabled={items.length === 0}
+          >
+            Exporter
+          </button>
           <button type="button" className="btn btn-secondary" onClick={clear}>
             Tout retirer
           </button>
         </div>
       </div>
       <p className="meta-line">{store.hint}</p>
+      {exportStatus ? (
+        <p className="status-text status-ok" role="status">
+          {exportStatus}
+        </p>
+      ) : null}
 
       <div className="selected-panel">
         {selected.map((entry) => {
@@ -178,40 +227,47 @@ export function ShoppingListView() {
         </p>
       ) : null}
 
-      <ul className="shopping-list">
-        {(data?.items ?? []).map((item) => {
-          const isChecked = Boolean(checked[item.key]);
-          return (
-            <li key={item.key} className={isChecked ? "is-checked" : ""}>
-              <label className="shopping-item">
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() =>
-                    setChecked((prev) => ({
-                      ...prev,
-                      [item.key]: !prev[item.key],
-                    }))
-                  }
-                />
-                <span>
-                  <strong>{item.name}</strong>
-                  <em>{formatAmount(item.amount, item.unit)}</em>
-                  <small>{item.recipeNames.join(" · ")}</small>
-                </span>
-              </label>
-              <a
-                className="btn btn-primary btn-compact"
-                href={store.searchUrl(item.name)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {store.shortName}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="aisle-groups">
+        {grouped.map((group) => (
+          <section key={group.aisle.id} className="aisle-group">
+            <h2 className="aisle-title">{group.aisle.label}</h2>
+            <ul className="shopping-list">
+              {group.items.map((item) => {
+                const isChecked = Boolean(checked[item.key]);
+                return (
+                  <li key={item.key} className={isChecked ? "is-checked" : ""}>
+                    <label className="shopping-item">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setChecked((prev) => ({
+                            ...prev,
+                            [item.key]: !prev[item.key],
+                          }))
+                        }
+                      />
+                      <span>
+                        <strong>{item.name}</strong>
+                        <em>{formatAmount(item.amount, item.unit)}</em>
+                        <small>{item.recipeNames.join(" · ")}</small>
+                      </span>
+                    </label>
+                    <a
+                      className="btn btn-primary btn-compact"
+                      href={store.searchUrl(item.name)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {store.shortName}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
     </section>
   );
 }
