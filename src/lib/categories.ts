@@ -9,10 +9,10 @@ export type AisleId =
   | "poisson"
   | "fruits-legumes"
   | "boulangerie"
+  | "herbes"
   | "epicerie-salee"
   | "epicerie-sucree"
   | "boissons"
-  | "herbes"
   | "autres";
 
 export type Aisle = {
@@ -30,7 +30,7 @@ export const AISLES: Aisle[] = [
   { id: "poisson", label: "Poissonnerie", emoji: "🐟" },
   { id: "fruits-legumes", label: "Fruits & légumes", emoji: "🥬" },
   { id: "boulangerie", label: "Boulangerie", emoji: "🥖" },
-  { id: "herbes", label: "Herbes & aromates", emoji: "🌿" },
+  { id: "herbes", label: "Herbes fraîches", emoji: "🌿" },
   { id: "epicerie-salee", label: "Épicerie salée", emoji: "🫙" },
   { id: "epicerie-sucree", label: "Épicerie sucrée", emoji: "🍯" },
   { id: "boissons", label: "Boissons", emoji: "🧃" },
@@ -42,84 +42,649 @@ const AISLE_BY_ID = Object.fromEntries(AISLES.map((a) => [a.id, a])) as Record<
   Aisle
 >;
 
-type Rule = { aisle: AisleId; patterns: RegExp[] };
+/** Minuscules + sans accents pour matcher robustement. */
+function normalize(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/['’]/g, " ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-const RULES: Rule[] = [
-  {
-    aisle: "menager",
-    patterns: [
-      /\b(lessive|liquide\s+vaisselle|éponge|éponges|papier\s+toilette|essuie[-\s]?tout|sacs?\s+(poubelle|congélation)|film\s+alimentaire|aluminium|nettoyant|javel|détartrant)\b/i,
-    ],
-  },
-  {
-    aisle: "surgeles",
-    patterns: [
-      /\b(surgelé|surgelés|frozen|glace|glaces|sorbet|frites\s+surgel)/i,
-    ],
-  },
-  {
-    aisle: "frais",
-    patterns: [
-      /\b(lait|crème|creme|yaourt|yogourt|fromage|beurre|margarine|œufs?|oeufs?|mozzarella|parmesan|feta|ricotta|mascarpone|crème\s+fraîche|creme\s+fraiche|skyr|faisselle|fromage\s+blanc|emmental|comté|cheddar|gouda)\b/i,
-    ],
-  },
-  {
-    aisle: "boucherie",
-    patterns: [
-      /\b(poulet|dinde|boeuf|bœuf|veau|porc|agneau|canard|jambon|lardons?|bacon|saucisse|chorizo|steak|haché|hache|escalope|filet\s+mignon|merguez|chipolata|prosciutto|pancetta|guanciale|bacon)\b/i,
-    ],
-  },
-  {
-    aisle: "poisson",
-    patterns: [
-      /\b(saumon|cabillaud|lieu|thon|crevette|crevettes|moule|moules|poisson|truite|bar\b|dorade|sardine|anchois|calamar|encornet|crabe|homard|scampi|surimi)\b/i,
-    ],
-  },
-  {
-    aisle: "fruits-legumes",
-    patterns: [
-      /\b(tomate|tomates|oignon|oignons|échalote|echalote|ail|carotte|carottes|pomme\s+de\s+terre|patate|courgette|aubergine|poivron|poivrons|salade|laitue|épinard|epinard|brocoli|chou|concombre|avocat|citron|citron\s+vert|lime|orange|pomme|banane|fraise|fruits?|légume|legume|champignon|champignons|céleri|celeri|poireau|poireaux|navet|radis|betterave|haricot\s+vert|petit\s+pois|mais\b|maïs|gingembre|échalotes|fenouil|courge|potiron|patate\s+douce|igname|mangue|ananas|myrtille|framboise|raisin|poire|pêche|peche|kiwi|basilic\s+frais)\b/i,
-    ],
-  },
-  {
-    aisle: "boulangerie",
-    patterns: [
-      /\b(pain|baguette|brioche|tortilla|wrap|pita|naan|ciabatta|pain\s+de\s+mie|croissant|bun|buns|burger)\b/i,
-    ],
-  },
-  {
-    aisle: "herbes",
-    patterns: [
-      /\b(persil|coriandre|menthe|basilic|thym|romarin|ciboulette|aneth|estragon|laurier|origan\s+frais|herbes?\s+de\s+provence|herbes?\s+fraîches|herbes?\s+fraiches)\b/i,
-    ],
-  },
-  {
-    aisle: "epicerie-salee",
-    patterns: [
-      /\b(huile|vinaigre|moutarde|mayonnaise|ketchup|sauce\s+soja|soja|bouillon|cube|pâtes?|pates?|riz|quinoa|couscous|semoule|lentille|pois\s+chiche|haricot|conserve|tomates?\s+pelées|concentré\s+de\s+tomate|passata|farine|chapelure|levure|sel|poivre|paprika|cumin|curry|curcuma|cannelle|muscade|piment|chipotle|harissa|tahini|miso|nouilles|spaghetti|penne|fusilli|tagliatelle|gnocchi|tortellini|ravioli|olive|olives|câpre|capre|cornichon|pickles|tortillas?\s+de\s+maïs)\b/i,
-    ],
-  },
-  {
-    aisle: "epicerie-sucree",
-    patterns: [
-      /\b(sucre|miel|sirop|chocolat|cacao|vanille|confiture|compote|biscuit|cookies?|céréales|cereales|granola|amande|amandes|noix|noisette|noisettes|cacahuète|cacahuete|raisins?\s+secs|dattes?|abricots?\s+secs)\b/i,
-    ],
-  },
-  {
-    aisle: "boissons",
-    patterns: [
-      /\b(eau|jus|soda|bière|biere|vin|lait\s+de\s+(amande|avoine|soja|coco)|boisson|thé|the\b|café|cafe|limonade|cola)\b/i,
-    ],
-  },
-];
+function hasWord(text: string, word: string): boolean {
+  return new RegExp(`(?:^|\\s)${word}(?:s)?(?:\\s|$)`).test(text);
+}
 
+function hasAnyWord(text: string, words: string[]): boolean {
+  return words.some((word) => hasWord(text, word));
+}
+
+function hasPhrase(text: string, phrase: string): boolean {
+  return text.includes(phrase);
+}
+
+function hasAnyPhrase(text: string, phrases: string[]): boolean {
+  return phrases.some((phrase) => hasPhrase(text, phrase));
+}
+
+/**
+ * Classement par priorité :
+ * 1. indices explicites (surgelé, conserve, jus…)
+ * 2. rayons « forts »
+ * 3. vocabulaire large
+ */
 export function categorizeIngredient(name: string): AisleId {
-  const normalized = name.normalize("NFC").trim();
-  for (const rule of RULES) {
-    if (rule.patterns.some((pattern) => pattern.test(normalized))) {
-      return rule.aisle;
-    }
+  const text = normalize(name);
+  if (!text) return "autres";
+
+  // --- Surgelés ---
+  if (
+    hasAnyPhrase(text, [
+      "surgel",
+      "frozen",
+      "congel",
+      "frites surgel",
+      "petits pois surgel",
+      "epinards surgel",
+      "legumes surgel",
+      "fruits surgel",
+    ]) ||
+    hasWord(text, "sorbet") ||
+    (hasWord(text, "glace") && !hasPhrase(text, "eau de"))
+  ) {
+    return "surgeles";
   }
+
+  // --- Boissons (avant fruits : jus d'orange, etc.) ---
+  if (
+    hasAnyPhrase(text, [
+      "jus d",
+      "jus de",
+      "eau gazeuse",
+      "eau minerale",
+      "eau petillante",
+      "sirop de menthe",
+      "sirop de grenadine",
+      "lait de coco",
+      "lait d amande",
+      "lait d avoine",
+      "lait de soja",
+      "lait de riz",
+      "boisson vegetale",
+    ]) ||
+    hasAnyWord(text, [
+      "biere",
+      "vin",
+      "cidre",
+      "cola",
+      "soda",
+      "limonade",
+      "sprite",
+      "the",
+      "cafe",
+      "espresso",
+      "smoothie",
+      "nectar",
+    ])
+  ) {
+    // lait végétal → plutôt épicerie (cuisine HF)
+    if (
+      hasAnyPhrase(text, [
+        "lait de coco",
+        "lait d amande",
+        "lait d avoine",
+        "lait de soja",
+        "lait de riz",
+        "boisson vegetale",
+      ])
+    ) {
+      return "epicerie-salee";
+    }
+    return "boissons";
+  }
+
+  // --- Conserves / sec (avant poisson/fruits) ---
+  if (
+    hasAnyPhrase(text, [
+      "concentre de tomate",
+      "tomates pelees",
+      "tomate pelee",
+      "coulis de tomate",
+      "passata",
+      "sauce tomate",
+      "puree de tomate",
+      "thon au naturel",
+      "thon a l huile",
+      "thon en conserve",
+      "sardines en conserve",
+      "pois chiches",
+      "pois chiche",
+      "haricots rouges",
+      "haricots blancs",
+      "haricot rouge",
+      "haricot blanc",
+      "lentilles corail",
+      "sauce soja",
+      "sauce poisson",
+      "cube de bouillon",
+      "bouillon cube",
+      "fond de veau",
+      "fond de volaille",
+      "herbes de provence",
+      "melange d epices",
+      "quatre epices",
+      "cinq epices",
+      "ail en poudre",
+      "oignon en poudre",
+      "gingembre en poudre",
+      "basilic seche",
+      "origan seche",
+      "persil seche",
+      "thym seche",
+    ]) ||
+    (hasWord(text, "conserve") &&
+      hasAnyWord(text, [
+        "thon",
+        "sardine",
+        "mais",
+        "haricot",
+        "pois",
+        "tomate",
+      ])) ||
+    (hasWord(text, "epice") && !hasPhrase(text, "frais"))
+  ) {
+    return "epicerie-salee";
+  }
+
+  // --- Ménager ---
+  if (
+    hasAnyWord(text, [
+      "lessive",
+      "javel",
+      "detartrant",
+      "nettoyant",
+      "eponge",
+      "aluminium",
+    ]) ||
+    hasAnyPhrase(text, [
+      "liquide vaisselle",
+      "papier toilette",
+      "papier absorbant",
+      "essuie tout",
+      "sac poubelle",
+      "sacs poubelle",
+      "film alimentaire",
+      "papier alu",
+      "papier sulfurise",
+    ])
+  ) {
+    return "menager";
+  }
+
+  // --- Herbes fraîches (avant fruits/légumes) ---
+  if (
+    !hasAnyPhrase(text, ["seche", "seches", "en poudre", "de provence"]) &&
+    (hasAnyWord(text, [
+      "persil",
+      "coriandre",
+      "menthe",
+      "basilic",
+      "ciboulette",
+      "aneth",
+      "estragon",
+      "cerfeuil",
+      "oseille",
+    ]) ||
+      hasAnyPhrase(text, [
+        "herbes fraiches",
+        "herbe fraiche",
+        "romarin frais",
+        "thym frais",
+        "origan frais",
+        "laurier frais",
+      ]))
+  ) {
+    return "herbes";
+  }
+
+  // --- Boucherie / charcuterie ---
+  if (
+    hasAnyWord(text, [
+      "poulet",
+      "dinde",
+      "canard",
+      "boeuf",
+      "veau",
+      "porc",
+      "agneau",
+      "jambon",
+      "lardon",
+      "bacon",
+      "saucisse",
+      "chorizo",
+      "steak",
+      "hache",
+      "escalope",
+      "merguez",
+      "chipolata",
+      "prosciutto",
+      "pancetta",
+      "guanciale",
+      "ribs",
+      "travers",
+      "magret",
+      "andouillette",
+      "boudin",
+      "terrine",
+      "rosette",
+      "coppa",
+      "mortadelle",
+      "pepperoni",
+      "salami",
+      "speck",
+      "saucisson",
+      "rillette",
+    ]) ||
+    hasAnyPhrase(text, [
+      "filet mignon",
+      "blanc de poulet",
+      "blanc de dinde",
+      "cuisse de",
+      "haut de cuisse",
+      "araignee de",
+      "rumsteck",
+      "entrecote",
+      "faux filet",
+      "cote de boeuf",
+      "cote de porc",
+      "roti de",
+      "emince de",
+      "pate de campagne",
+      "pate en croute",
+      "confit de canard",
+    ])
+  ) {
+    return "boucherie";
+  }
+
+  // --- Poissonnerie ---
+  if (
+    hasAnyWord(text, [
+      "saumon",
+      "cabillaud",
+      "colin",
+      "merlu",
+      "sole",
+      "truite",
+      "dorade",
+      "daurade",
+      "bar",
+      "loup",
+      "sardine",
+      "anchois",
+      "maquereau",
+      "crevette",
+      "gambas",
+      "moule",
+      "calamar",
+      "encornet",
+      "seiche",
+      "crabe",
+      "homard",
+      "scampi",
+      "surimi",
+      "poisson",
+      "bulot",
+      "tourteau",
+      "huitre",
+    ]) ||
+    hasAnyPhrase(text, [
+      "filet de poisson",
+      "pave de saumon",
+      "pave de cabillaud",
+      "darne de",
+      "queue de lotte",
+      "fruits de mer",
+      "noix de st",
+      "coquille saint",
+      "lieu noir",
+      "lieu jaune",
+    ])
+  ) {
+    return "poisson";
+  }
+
+  // --- Frais & crèmerie ---
+  if (
+    hasAnyWord(text, [
+      "lait",
+      "creme",
+      "yaourt",
+      "yogourt",
+      "yogurt",
+      "fromage",
+      "beurre",
+      "margarine",
+      "oeuf",
+      "mozzarella",
+      "parmesan",
+      "feta",
+      "ricotta",
+      "mascarpone",
+      "skyr",
+      "faisselle",
+      "emmental",
+      "comte",
+      "cheddar",
+      "gouda",
+      "gruyere",
+      "raclette",
+      "reblochon",
+      "camembert",
+      "brie",
+      "chevre",
+      "burrata",
+      "halloumi",
+      "paneer",
+      "kefir",
+    ]) ||
+    hasAnyPhrase(text, [
+      "creme fraiche",
+      "creme liquide",
+      "creme epaisse",
+      "creme fleurette",
+      "fromage blanc",
+      "fromage rape",
+      "fromage frais",
+      "petit suisse",
+      "blanc d oeuf",
+      "jaune d oeuf",
+    ])
+  ) {
+    return "frais";
+  }
+
+  // --- Boulangerie ---
+  if (
+    hasAnyWord(text, [
+      "pain",
+      "baguette",
+      "brioche",
+      "tortilla",
+      "wrap",
+      "pita",
+      "naan",
+      "ciabatta",
+      "croissant",
+      "bun",
+      "burger",
+      "muffin",
+      "bagel",
+      "focaccia",
+    ]) ||
+    hasAnyPhrase(text, [
+      "pain de mie",
+      "pain burger",
+      "pain hot dog",
+      "galette de sarrasin",
+    ])
+  ) {
+    return "boulangerie";
+  }
+
+  // --- Fruits & légumes (pomme de terre AVANT pomme) ---
+  if (
+    hasAnyPhrase(text, [
+      "pomme de terre",
+      "patate douce",
+      "oignon rouge",
+      "oignon jaune",
+      "oignon nouveau",
+      "citron vert",
+      "citron jaune",
+      "tomate cerise",
+      "tomates cerises",
+      "haricot vert",
+      "haricots verts",
+      "petit pois",
+      "petits pois",
+      "pois gourmand",
+      "champignon de paris",
+      "champignons de paris",
+      "chou fleur",
+      "chou rouge",
+      "chou kale",
+      "chou chinois",
+      "jeune pousse",
+      "jeunes pousses",
+      "gingembre frais",
+      "curcuma frais",
+    ]) ||
+    hasAnyWord(text, [
+      "tomate",
+      "oignon",
+      "echalote",
+      "ail",
+      "carotte",
+      "courgette",
+      "aubergine",
+      "poivron",
+      "salade",
+      "laitue",
+      "epinard",
+      "brocoli",
+      "chou",
+      "concombre",
+      "avocat",
+      "citron",
+      "lime",
+      "orange",
+      "clementine",
+      "mandarine",
+      "pamplemousse",
+      "pomme",
+      "banane",
+      "fraise",
+      "framboise",
+      "myrtille",
+      "mure",
+      "raisin",
+      "poire",
+      "peche",
+      "nectarine",
+      "abricot",
+      "cerise",
+      "kiwi",
+      "mangue",
+      "ananas",
+      "melon",
+      "pasteque",
+      "figue",
+      "grenade",
+      "fruit",
+      "legume",
+      "champignon",
+      "pleurote",
+      "shiitake",
+      "celeri",
+      "poireau",
+      "navet",
+      "radis",
+      "betterave",
+      "mais",
+      "gingembre",
+      "fenouil",
+      "courge",
+      "potiron",
+      "butternut",
+      "potimarron",
+      "igname",
+      "patate",
+      "asperge",
+      "artichaut",
+      "endive",
+      "mache",
+      "roquette",
+      "cresson",
+      "blette",
+      "scarole",
+      "chicoree",
+      "panais",
+      "rutabaga",
+      "topinambour",
+      "ciboule",
+    ])
+  ) {
+    return "fruits-legumes";
+  }
+
+  // --- Épicerie sucrée ---
+  if (
+    hasAnyWord(text, [
+      "sucre",
+      "miel",
+      "chocolat",
+      "cacao",
+      "vanille",
+      "confiture",
+      "compote",
+      "biscuit",
+      "cookie",
+      "cereale",
+      "granola",
+      "amande",
+      "noix",
+      "noisette",
+      "cacahuete",
+      "pistache",
+      "cajou",
+      "datte",
+      "canneberge",
+      "cranberry",
+      "nougat",
+      "caramel",
+      "nutella",
+    ]) ||
+    hasAnyPhrase(text, [
+      "sucre en poudre",
+      "sucre glace",
+      "sucre roux",
+      "sirop d erable",
+      "sirop d agave",
+      "extrait de vanille",
+      "fleur d oranger",
+      "raisins secs",
+      "abricots secs",
+      "fruits secs",
+      "pepites de chocolat",
+      "pate a tartiner",
+    ])
+  ) {
+    return "epicerie-sucree";
+  }
+
+  // --- Épicerie salée (filet large) ---
+  if (
+    hasAnyWord(text, [
+      "huile",
+      "vinaigre",
+      "moutarde",
+      "mayonnaise",
+      "ketchup",
+      "soja",
+      "bouillon",
+      "cube",
+      "pate",
+      "riz",
+      "quinoa",
+      "couscous",
+      "semoule",
+      "lentille",
+      "farine",
+      "chapelure",
+      "levure",
+      "sel",
+      "poivre",
+      "paprika",
+      "cumin",
+      "curry",
+      "curcuma",
+      "cannelle",
+      "muscade",
+      "piment",
+      "chipotle",
+      "harissa",
+      "tahini",
+      "miso",
+      "nouille",
+      "spaghetti",
+      "penne",
+      "fusilli",
+      "tagliatelle",
+      "gnocchi",
+      "tortellini",
+      "ravioli",
+      "olive",
+      "capre",
+      "cornichon",
+      "pickle",
+      "polenta",
+      "boulgour",
+      "orge",
+      "avoine",
+      "flocons",
+      "fecule",
+      "maizena",
+      "sauce",
+      "pesto",
+      "tapenade",
+      "hummus",
+      "houmous",
+      "sambal",
+      "sriracha",
+      "tabasco",
+      "dashi",
+      "nori",
+      "wakame",
+      "algue",
+      "sesame",
+      "thon",
+    ]) ||
+    hasAnyPhrase(text, [
+      "huile d olive",
+      "huile de tournesol",
+      "huile de sesame",
+      "vinaigre balsamique",
+      "vinaigre de",
+      "sauce soja",
+      "pate de curry",
+      "pate de tomate",
+      "concentre de",
+      "tomates pelees",
+      "pois chiches",
+      "haricots secs",
+      "feuilles de brick",
+      "feuille de riz",
+      "galette de riz",
+      "vermicelle",
+      "nouilles de riz",
+      "tortillas de mais",
+      "nuoc mam",
+      "nam pla",
+      "graines de",
+    ])
+  ) {
+    return "epicerie-salee";
+  }
+
+  // --- Boissons restantes ---
+  if (hasAnyWord(text, ["eau", "jus", "boisson"])) {
+    return "boissons";
+  }
+
   return "autres";
 }
 
