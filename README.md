@@ -1,15 +1,13 @@
 # Bocal
 
-App web pour choisir des recettes HelloFresh (catalogue public FR) et générer une liste de courses avec liens vers Intermarché et Leclerc.
+App web pour choisir des recettes HelloFresh (catalogue public FR) et générer une liste de courses triée par rayon, exportable vers Apple Notes / Rappels.
 
 ## Fonctionnalités
 
 1. Parcourir / chercher les recettes HelloFresh France
 2. Sélectionner plusieurs recettes (stockées dans le navigateur)
-3. Fusionner les ingrédients en une liste unique
-4. Ouvrir chaque produit dans Intermarché ou Leclerc (liens de recherche)
-
-> Pas de remplissage automatique du panier Drive : les enseignes n’exposent pas d’API consommateur fiable pour ça.
+3. Fusionner les ingrédients en une liste unique triée par rayon
+4. Exporter vers Notes ou Rappels (partage / presse-papiers)
 
 ## Démarrage
 
@@ -28,4 +26,4 @@ Ouvre [http://localhost:3000](http://localhost:3000).
 
 ## Notes
 
-Les données recettes passent par l’API publique HelloFresh (jeton extrait de la page `/recipes`). Si HelloFresh change son front, l’extraction du jeton peut nécessiter un ajustement.
+Les données recettes passent par l’API publique HelloFresh (jeton extrait de la page d’accueil). Si HelloFresh change son front, l’extraction du jeton peut nécessiter un ajustement.

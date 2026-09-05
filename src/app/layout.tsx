@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Bocal — HelloFresh → courses",
   description:
-    "Choisis des recettes HelloFresh et génère une liste de courses pour Intermarché ou Leclerc.",
+    "Choisis des recettes HelloFresh et génère une liste de courses triée par rayon, exportable dans Notes ou Rappels.",
 };
 
 export default function RootLayout({

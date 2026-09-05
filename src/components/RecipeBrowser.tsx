@@ -74,8 +74,8 @@ export function RecipeBrowser() {
         <p className="eyebrow">Recettes HelloFresh</p>
         <h2>Compose ta semaine</h2>
         <p className="lede">
-          Choisis quelques plats. On fusionne les ingrédients, puis tu ouvres
-          Intermarché ou Leclerc pour les ajouter à ton Drive.
+          Choisis quelques plats. On fusionne les ingrédients par rayon, prêts
+          pour Notes ou Rappels.
         </p>
       </div>
 

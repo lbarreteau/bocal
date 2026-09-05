@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelection } from "./SelectionProvider";
 import { formatListForApple, groupItemsByAisle } from "@/lib/categories";
 import { formatAmount } from "@/lib/shopping";
-import { STORES, type StoreId } from "@/lib/stores";
 import type { ShoppingItem } from "@/lib/types";
 
 type ListResponse = {
@@ -22,17 +21,11 @@ type ListResponse = {
 
 export function ShoppingListView() {
   const { selected, recipesById, setServings, remove, clear } = useSelection();
-  const [storeId, setStoreId] = useState<StoreId>("intermarche");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [data, setData] = useState<ListResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
-
-  const store = useMemo(
-    () => STORES.find((entry) => entry.id === storeId) ?? STORES[0],
-    [storeId],
-  );
 
   useEffect(() => {
     if (selected.length === 0) {
@@ -68,14 +61,6 @@ export function ShoppingListView() {
   const items = data?.items ?? [];
   const remaining = items.filter((item) => !checked[item.key]);
   const grouped = useMemo(() => groupItemsByAisle(items), [items]);
-
-  function openAllRemaining() {
-    remaining.slice(0, 8).forEach((item, index) => {
-      window.setTimeout(() => {
-        window.open(store.searchUrl(item.name), "_blank", "noopener,noreferrer");
-      }, index * 250);
-    });
-  }
 
   async function exportForApple() {
     const source = remaining.length > 0 ? remaining : items;
@@ -135,31 +120,10 @@ export function ShoppingListView() {
       </div>
 
       <div className="toolbar">
-        <div className="segmented" role="group" aria-label="Magasin">
-          {STORES.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={storeId === entry.id ? "is-active" : ""}
-              aria-pressed={storeId === entry.id}
-              onClick={() => setStoreId(entry.id)}
-            >
-              {entry.shortName}
-            </button>
-          ))}
-        </div>
         <div className="toolbar-actions">
           <button
             type="button"
             className="btn btn-primary"
-            onClick={openAllRemaining}
-            disabled={remaining.length === 0}
-          >
-            Ouvrir dans {store.shortName}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
             onClick={() => void exportForApple()}
             disabled={items.length === 0}
           >
@@ -170,7 +134,6 @@ export function ShoppingListView() {
           </button>
         </div>
       </div>
-      <p className="meta-line">{store.hint}</p>
       {exportStatus ? (
         <p className="status-text status-ok" role="status">
           {exportStatus}
@@ -253,14 +216,6 @@ export function ShoppingListView() {
                         <small>{item.recipeNames.join(" · ")}</small>
                       </span>
                     </label>
-                    <a
-                      className="btn btn-primary btn-compact"
-                      href={store.searchUrl(item.name)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {store.shortName}
-                    </a>
                   </li>
                 );
               })}

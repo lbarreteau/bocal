@@ -9,11 +9,11 @@ export default function HomePage() {
           <p className="eyebrow">Bocal</p>
           <h1>
             Des recettes HelloFresh,
-            <span className="hero-accent"> une liste pour ton Drive.</span>
+            <span className="hero-accent"> une liste pour tes courses.</span>
           </h1>
           <p className="lede">
-            Sélectionne tes plats de la semaine. On regroupe les ingrédients,
-            puis tu ouvres Intermarché ou Leclerc pour remplir ton panier.
+            Sélectionne tes plats de la semaine. On regroupe les ingrédients par
+            rayon, prêts à exporter dans Notes ou Rappels.
           </p>
           <div className="hero-actions">
             <a href="#recettes" className="btn btn-primary">
