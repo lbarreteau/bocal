@@ -171,7 +171,7 @@ function mapSummary(item: HfSearchItem): RecipeSummary {
     tags: (item.tags ?? [])
       .map((tag) => tag.name)
       .filter((name): name is string => Boolean(name))
-      .slice(0, 4),
+      .slice(0, 10),
   };
 }
 
@@ -179,6 +179,7 @@ export async function searchRecipes(options: {
   q?: string;
   limit?: number;
   offset?: number;
+  vegetarian?: boolean;
 }): Promise<{ items: RecipeSummary[]; total: number }> {
   const query: Record<string, string> = {
     country: "fr",
@@ -187,7 +188,15 @@ export async function searchRecipes(options: {
     offset: String(options.offset ?? 0),
     products: "classic-box|veggie-box|meal-plan",
   };
-  if (options.q?.trim()) query.q = options.q.trim();
+
+  // La recherche texte "végétarien" est plus fiable que products=veggie-box
+  // (qui renvoie parfois des recettes non végétariennes).
+  if (options.vegetarian) {
+    const base = options.q?.trim() ?? "";
+    query.q = base ? `${base} végétarien` : "végétarien";
+  } else if (options.q?.trim()) {
+    query.q = options.q.trim();
+  }
 
   const data = await hfFetch<{ items: HfSearchItem[]; total: number }>(
     "/recipes/search",

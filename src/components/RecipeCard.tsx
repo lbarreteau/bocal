@@ -41,6 +41,15 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
           <Link href={`/recette/${recipe.id}`}>{recipe.name}</Link>
         </h3>
         {recipe.headline ? <p className="card-subtitle">{recipe.headline}</p> : null}
+        {recipe.tags.length > 0 ? (
+          <div className="tag-row" aria-label="Tags">
+            {recipe.tags.slice(0, 3).map((tag) => (
+              <span key={tag} className="tag-pill">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="recipe-card-actions">
           <button
             type="button"
