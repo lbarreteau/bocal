@@ -87,28 +87,22 @@ export function ShoppingListView() {
           title: "Courses — Bocal",
           text,
         });
-        setExportStatus(
-          "Partagé. Dans Notes : sélectionne les produits → bouton checklist ✓",
-        );
+        setExportStatus("Partagé — choisis Notes ou Rappels");
       } else {
         await navigator.clipboard.writeText(text);
-        setExportStatus(
-          "Copié. Dans Notes : colle, sélectionne les produits → bouton checklist ✓",
-        );
+        setExportStatus("Liste copiée — colle-la dans Notes ou Rappels");
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       try {
         await navigator.clipboard.writeText(text);
-        setExportStatus(
-          "Copié. Dans Notes : colle, sélectionne les produits → bouton checklist ✓",
-        );
+        setExportStatus("Liste copiée — colle-la dans Notes ou Rappels");
       } catch {
         setExportStatus("Impossible d’exporter automatiquement");
       }
     }
 
-    window.setTimeout(() => setExportStatus(null), 8000);
+    window.setTimeout(() => setExportStatus(null), 4000);
   }
 
   if (selected.length === 0) {
@@ -151,11 +145,6 @@ export function ShoppingListView() {
           </button>
         </div>
       </div>
-      <p className="meta-line export-hint">
-        Dans Notes, les cases cliquables se créent ainsi : sélectionne les
-        lignes de produits, puis appuie sur le bouton checklist (cercle ✓)
-        au-dessus du clavier.
-      </p>
       {exportStatus ? (
         <p className="status-text status-ok" role="status">
           {exportStatus}

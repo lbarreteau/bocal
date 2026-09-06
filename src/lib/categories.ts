@@ -717,14 +717,10 @@ export type ExportRecipe = {
   servings?: number;
 };
 
-/**
- * Texte prêt pour Notes / Rappels Apple.
- * Les produits sont en lignes simples (sans ☐) : dans Notes, sélectionne-les
- * puis appuie sur le bouton checklist pour des cases vraiment cliquables.
- */
+/** Texte prêt à coller dans Notes / Rappels Apple. */
 export function formatListForApple(
   items: ShoppingItem[],
-  options?: { title?: string; recipes?: ExportRecipe[]; includeTip?: boolean },
+  options?: { title?: string; recipes?: ExportRecipe[] },
 ): string {
   const title = options?.title ?? "Courses — Bocal";
   const groups = groupItemsByAisle(items);
@@ -732,7 +728,7 @@ export function formatListForApple(
 
   const recipes = options?.recipes?.filter((recipe) => recipe.name.trim()) ?? [];
   if (recipes.length > 0) {
-    lines.push("Recettes");
+    lines.push("🍽 Recettes");
     for (const recipe of recipes) {
       const servings =
         typeof recipe.servings === "number" && recipe.servings > 0
@@ -744,19 +740,12 @@ export function formatListForApple(
   }
 
   for (const group of groups) {
-    lines.push(group.aisle.label);
+    lines.push(`${group.aisle.emoji} ${group.aisle.label}`);
     for (const item of group.items) {
       const amount = formatAmount(item.amount, item.unit);
-      // Ligne simple : Notes convertit mieux en checklist native que les ☐ unicode
-      lines.push(`${item.name} — ${amount}`);
+      lines.push(`☐ ${item.name} — ${amount}`);
     }
     lines.push("");
-  }
-
-  if (options?.includeTip !== false) {
-    lines.push(
-      "Astuce Notes : sélectionne les lignes de produits ci-dessus, puis appuie sur le bouton checklist (cercle ✓) au-dessus du clavier.",
-    );
   }
 
   return lines.join("\n").trimEnd() + "\n";
