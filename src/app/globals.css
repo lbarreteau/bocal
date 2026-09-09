@@ -755,6 +755,13 @@ h3 {
   box-shadow: inset 0 0 0 1px var(--separator);
 }
 
+.selected-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .selected-main {
   display: flex;
   gap: var(--space-3);

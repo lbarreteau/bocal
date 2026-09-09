@@ -62,6 +62,17 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
           <Link href={`/recette/${recipe.id}`} className="btn btn-secondary">
             Voir
           </Link>
+          {recipe.websiteUrl ? (
+            <a
+              className="btn btn-secondary"
+              href={recipe.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Étapes HelloFresh : ${recipe.name}`}
+            >
+              Étapes
+            </a>
+          ) : null}
         </div>
       </div>
     </article>

@@ -104,6 +104,16 @@ export function RecipeDetailView({ recipeId }: { recipeId: string }) {
             >
               {selected ? "Ajoutée à ma semaine" : "Ajouter à ma semaine"}
             </button>
+            {recipe.websiteUrl ? (
+              <a
+                className="btn btn-secondary"
+                href={recipe.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Étapes sur HelloFresh
+              </a>
+            ) : null}
             <Link href="/liste" className="btn btn-secondary">
               Voir ma liste
             </Link>

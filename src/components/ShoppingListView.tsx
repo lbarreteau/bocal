@@ -156,6 +156,9 @@ export function ShoppingListView() {
           const meta =
             recipesById[entry.id] ??
             data?.recipes.find((recipe) => recipe.id === entry.id);
+          const websiteUrl =
+            recipesById[entry.id]?.websiteUrl ??
+            data?.recipes.find((recipe) => recipe.id === entry.id)?.websiteUrl;
           return (
             <div key={entry.id} className="selected-row">
               <div className="selected-main">
@@ -182,13 +185,25 @@ export function ShoppingListView() {
                   </label>
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary btn-compact"
-                onClick={() => remove(entry.id)}
-              >
-                Retirer
-              </button>
+              <div className="selected-actions">
+                {websiteUrl ? (
+                  <a
+                    className="btn btn-secondary btn-compact"
+                    href={websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Étapes
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-compact"
+                  onClick={() => remove(entry.id)}
+                >
+                  Retirer
+                </button>
+              </div>
             </div>
           );
         })}
