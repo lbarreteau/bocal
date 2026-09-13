@@ -3,10 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { RecipeCard } from "./RecipeCard";
 import {
+  CALORIE_OPTIONS,
+  CUISINE_OPTIONS,
   DEFAULT_FILTERS,
-  FILTER_TAGS,
+  FILTER_TAG_GROUPS,
   PREP_OPTIONS,
   filtersAreActive,
+  type CalorieFilter,
   type PrepFilter,
   type RecipeFilters,
 } from "@/lib/recipeFilters";
@@ -36,8 +39,11 @@ export function RecipeBrowser() {
       try {
         const params = new URLSearchParams({ limit: "24", offset: "0" });
         if (submittedQuery.trim()) params.set("q", submittedQuery.trim());
-        if (filters.vegetarian) params.set("vegetarian", "1");
         if (filters.prep !== "all") params.set("prep", filters.prep);
+        if (filters.calories !== "all") {
+          params.set("calories", filters.calories);
+        }
+        if (filters.cuisine) params.set("cuisine", filters.cuisine);
         if (filters.tags.length > 0) params.set("tags", filters.tags.join("|"));
 
         const timeout = window.setTimeout(() => {
@@ -85,8 +91,12 @@ export function RecipeBrowser() {
     setFilters((prev) => ({ ...prev, prep }));
   }
 
-  function toggleVegetarian() {
-    setFilters((prev) => ({ ...prev, vegetarian: !prev.vegetarian }));
+  function setCalories(calories: CalorieFilter) {
+    setFilters((prev) => ({ ...prev, calories }));
+  }
+
+  function setCuisine(cuisine: string | null) {
+    setFilters((prev) => ({ ...prev, cuisine }));
   }
 
   function toggleTag(tag: string) {
@@ -113,8 +123,8 @@ export function RecipeBrowser() {
         <p className="eyebrow">Recettes HelloFresh</p>
         <h2>Compose ta semaine</h2>
         <p className="lede">
-          Filtre par durée, régime ou tags. On fusionne ensuite les
-          ingrédients par rayon.
+          Filtre par durée, calories, cuisine, régime ou style — comme sur
+          HelloFresh.
         </p>
       </div>
 
@@ -153,38 +163,71 @@ export function RecipeBrowser() {
         </div>
 
         <div className="filter-row">
-          <p className="filter-label">Régime</p>
-          <div className="filter-chips">
-            <button
-              type="button"
-              className={`filter-chip${filters.vegetarian ? " is-active" : ""}`}
-              aria-pressed={filters.vegetarian}
-              onClick={toggleVegetarian}
-            >
-              Végétarien
-            </button>
+          <p className="filter-label">Calories</p>
+          <div className="segmented" role="group" aria-label="Calories max">
+            {CALORIE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={filters.calories === option.id ? "is-active" : ""}
+                aria-pressed={filters.calories === option.id}
+                onClick={() => setCalories(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="filter-row">
-          <p className="filter-label">Tags</p>
-          <div className="filter-chips" role="group" aria-label="Tags HelloFresh">
-            {FILTER_TAGS.map((tag) => {
-              const selected = filters.tags.includes(tag);
+          <p className="filter-label">Cuisine</p>
+          <div
+            className="filter-chips"
+            role="group"
+            aria-label="Cuisine HelloFresh"
+          >
+            {CUISINE_OPTIONS.map((option) => {
+              const selected = filters.cuisine === option.id;
               return (
                 <button
-                  key={tag}
+                  key={option.id ?? "all"}
                   type="button"
                   className={`filter-chip${selected ? " is-active" : ""}`}
                   aria-pressed={selected}
-                  onClick={() => toggleTag(tag)}
+                  onClick={() => setCuisine(option.id)}
                 >
-                  {tag}
+                  {option.label}
                 </button>
               );
             })}
           </div>
         </div>
+
+        {FILTER_TAG_GROUPS.map((group) => (
+          <div key={group.id} className="filter-row">
+            <p className="filter-label">{group.label}</p>
+            <div
+              className="filter-chips"
+              role="group"
+              aria-label={group.label}
+            >
+              {group.tags.map((tag) => {
+                const selected = filters.tags.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={`filter-chip${selected ? " is-active" : ""}`}
+                    aria-pressed={selected}
+                    onClick={() => toggleTag(tag.id)}
+                  >
+                    {tag.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
 
         {active ? (
           <div className="filter-actions">
@@ -236,7 +279,7 @@ export function RecipeBrowser() {
       {!loading && !error && items.length === 0 ? (
         <div className="empty-state">
           <h3>Aucune recette trouvée</h3>
-          <p>Essaie d’élargir la durée ou de retirer un tag.</p>
+          <p>Essaie d’élargir la durée, les calories ou de retirer un filtre.</p>
         </div>
       ) : null}
 

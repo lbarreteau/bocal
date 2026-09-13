@@ -146,7 +146,8 @@ type HfSearchItem = {
   prepTime?: string;
   difficulty?: number;
   slug?: string;
-  tags?: Array<{ name?: string }>;
+  tags?: Array<{ name?: string; slug?: string }>;
+  cuisines?: Array<{ name?: string; slug?: string; type?: string }>;
   nutrition?: HfNutrition[];
 };
 
@@ -181,6 +182,14 @@ function extractCalories(nutrition: HfNutrition[] | undefined): number | null {
 }
 
 function mapSummary(item: HfSearchItem): RecipeSummary {
+  const tagNames = (item.tags ?? [])
+    .flatMap((tag) => [tag.name, tag.slug])
+    .filter((name): name is string => Boolean(name));
+
+  const cuisineNames = (item.cuisines ?? [])
+    .flatMap((cuisine) => [cuisine.name, cuisine.slug, cuisine.type])
+    .filter((name): name is string => Boolean(name));
+
   return {
     id: item.id,
     name: item.name,
@@ -193,10 +202,8 @@ function mapSummary(item: HfSearchItem): RecipeSummary {
     prepMinutes: parseIsoDurationMinutes(item.prepTime),
     difficulty: typeof item.difficulty === "number" ? item.difficulty : null,
     calories: extractCalories(item.nutrition),
-    tags: (item.tags ?? [])
-      .map((tag) => tag.name)
-      .filter((name): name is string => Boolean(name))
-      .slice(0, 10),
+    tags: [...new Set(tagNames)].slice(0, 24),
+    cuisines: [...new Set(cuisineNames)].slice(0, 12),
   };
 }
 
@@ -205,6 +212,7 @@ export async function searchRecipes(options: {
   limit?: number;
   offset?: number;
   vegetarian?: boolean;
+  cuisine?: string | null;
 }): Promise<{ items: RecipeSummary[]; total: number }> {
   const query: Record<string, string> = {
     country: "fr",
@@ -213,6 +221,10 @@ export async function searchRecipes(options: {
     offset: String(options.offset ?? 0),
     products: "classic-box|veggie-box|meal-plan",
   };
+
+  if (options.cuisine?.trim()) {
+    query.cuisine = options.cuisine.trim();
+  }
 
   // La recherche texte "végétarien" est plus fiable que products=veggie-box
   // (qui renvoie parfois des recettes non végétariennes).

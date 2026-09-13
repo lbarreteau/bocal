@@ -10,6 +10,8 @@ export type RecipeSummary = {
   /** Calories par portion (HelloFresh), si disponibles. */
   calories: number | null;
   tags: string[];
+  /** Noms + slugs de cuisine HelloFresh. */
+  cuisines: string[];
 };
 
 export type RecipeIngredient = {
