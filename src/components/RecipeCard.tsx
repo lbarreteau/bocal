@@ -35,6 +35,9 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
       <div className="recipe-card-body">
         <div className="meta-row">
           {recipe.prepMinutes ? <span>{recipe.prepMinutes} min</span> : null}
+          {recipe.calories != null ? (
+            <span>{recipe.calories.toLocaleString("fr-FR")} kcal</span>
+          ) : null}
           {difficulty ? <span>{difficulty}</span> : null}
         </div>
         <h3>

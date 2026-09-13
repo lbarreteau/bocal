@@ -7,6 +7,8 @@ export type RecipeSummary = {
   websiteUrl: string;
   prepMinutes: number | null;
   difficulty: number | null;
+  /** Calories par portion (HelloFresh), si disponibles. */
+  calories: number | null;
   tags: string[];
 };
 

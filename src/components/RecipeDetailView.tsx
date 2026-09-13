@@ -82,6 +82,9 @@ export function RecipeDetailView({ recipeId }: { recipeId: string }) {
           {recipe.headline ? <p className="lede">{recipe.headline}</p> : null}
           <div className="meta-row">
             {recipe.prepMinutes ? <span>{recipe.prepMinutes} min</span> : null}
+            {recipe.calories != null ? (
+              <span>{recipe.calories.toLocaleString("fr-FR")} kcal</span>
+            ) : null}
             {recipe.difficulty != null ? (
               <span>
                 {recipe.difficulty <= 1

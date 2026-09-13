@@ -128,6 +128,13 @@ async function hfFetch<T>(path: string, query: Record<string, string>): Promise<
   return (await response.json()) as T;
 }
 
+type HfNutrition = {
+  type?: string;
+  name?: string;
+  amount?: number;
+  unit?: string;
+};
+
 type HfSearchItem = {
   id: string;
   name: string;
@@ -140,6 +147,7 @@ type HfSearchItem = {
   difficulty?: number;
   slug?: string;
   tags?: Array<{ name?: string }>;
+  nutrition?: HfNutrition[];
 };
 
 type HfRecipeDetail = HfSearchItem & {
@@ -156,6 +164,22 @@ type HfRecipeDetail = HfSearchItem & {
   }>;
 };
 
+function extractCalories(nutrition: HfNutrition[] | undefined): number | null {
+  if (!Array.isArray(nutrition) || nutrition.length === 0) return null;
+
+  const kcalEntry =
+    nutrition.find(
+      (entry) =>
+        entry.unit?.toLowerCase() === "kcal" ||
+        /kcal/i.test(entry.name ?? ""),
+    ) ?? null;
+
+  if (kcalEntry == null || typeof kcalEntry.amount !== "number") return null;
+  if (!Number.isFinite(kcalEntry.amount) || kcalEntry.amount <= 0) return null;
+
+  return Math.round(kcalEntry.amount);
+}
+
 function mapSummary(item: HfSearchItem): RecipeSummary {
   return {
     id: item.id,
@@ -168,6 +192,7 @@ function mapSummary(item: HfSearchItem): RecipeSummary {
       `${HF_ORIGIN}/recipes/${item.slug ?? item.id}-${item.id}`,
     prepMinutes: parseIsoDurationMinutes(item.prepTime),
     difficulty: typeof item.difficulty === "number" ? item.difficulty : null,
+    calories: extractCalories(item.nutrition),
     tags: (item.tags ?? [])
       .map((tag) => tag.name)
       .filter((name): name is string => Boolean(name))
